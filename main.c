@@ -4,15 +4,19 @@
 #include <stdint.h>
 
 #include <uthash.h>
+#include <hpdf.h>
 
 #define ROW 3
 #define BOARD_SIZE ROW * ROW
+// #define KEY_SIZE BOARD_SIZE + 1
 
 typedef struct board_inf {
     char moves[BOARD_SIZE];
     char state[BOARD_SIZE];
     char next_move;
     char winner;
+
+    HPDF_Page page;
 
     UT_hash_handle hh;
 } board_inf_t;
@@ -110,16 +114,17 @@ void gen_child_boards(char *state, char player) {
     // Check if already exists
     board_inf_t *tmp = (board_inf_t *) malloc(sizeof(board_inf_t));
     HASH_FIND(hh, boards, state, BOARD_SIZE, tmp);
-    bool already_exists = (tmp != NULL);
+    // bool already_exists = (tmp != NULL);
+    //
+    // if(already_exists) return;
+    if(tmp != NULL) return;
 
-    free(tmp);
-    if(already_exists) return;
-
-    // print_board(state);
+    // print_key(state);
 
     // Make a new copy
     board_inf_t *board = (board_inf_t *) malloc(sizeof(board_inf_t));
-    memcpy(board->state, state, 9);
+    memcpy(board->state, state, BOARD_SIZE);
+    // board->state[BOARD_SIZE] = player;
     board->next_move = player;
 
     for(size_t i = 0; i < BOARD_SIZE; ++i) {
@@ -148,32 +153,83 @@ void gen_child_boards(char *state, char player) {
         memcpy(new_state, state, BOARD_SIZE);
         new_state[i] = player;
 
+        // print_key(new_state);
+
         gen_child_boards(new_state, other_player);
     }
 }
 
-int main(int argc, char **argv) {
-    printf("Hello\nIt's me\nI was wondering if after all these years you'd like to meet\n");
+void error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data) {
+    printf ("ERROR: error_no=%04X, detail_no=%u\n", (HPDF_UINT)error_no,
+                (HPDF_UINT)detail_no);
+}
 
-    // char state[] = "XOXO X XO";
+int main(int argc, char **argv) {
     char state[10] = "         ";
-    // print_board(state);
 
     gen_child_boards(state, 'X');
-    gen_child_boards(state, 'O');
 
-    // printf("%s\n", is_won(state) ? "true" : "false");
+    HPDF_Doc pdf = HPDF_New(error_handler, NULL);
+    if(!pdf) {
+        perror("Cold not create PdfDoc object");
+        return EXIT_FAILURE;
+    }
+    // HPDF_SetCompressionMode (pdf, HPDF_COMP_ALL);
 
-    unsigned int count = 0;
+    HPDF_Font font = HPDF_GetFont(pdf, "Helvetica", NULL);
 
+    // size_t page_count = 1024;
+    // HPDF_Page *pages = (HPDF_Page *) malloc(page_count * sizeof(HPDF_Page));
+    //
+    // for(size_t i = 0; i < page_count; ++i) {
+    //     pages[i] = HPDF_AddPage(pdf);
+    //
+    //     HPDF_Page_SetWidth(pages[i], 100);
+    //     HPDF_Page_SetHeight(pages[i], 100);
+    //
+    //     HPDF_Page_BeginText(pages[i]);
+    //     HPDF_Page_SetFontAndSize(pages[i], font, 10);
+    //     HPDF_Page_ShowText(pages[i], "ABCDEFGHI");
+    //     HPDF_Page_EndText(pages[i]);
+    // }
+
+    // HPDF_Destination dst;
+
+    // unsigned int count = 0;
+    //
     board_inf_t *s, *tmp;
+    // HASH_ITER(hh, boards, s, tmp) {
+    //     ++count;
+    // }
+    //
     HASH_ITER(hh, boards, s, tmp) {
         // print_board(s->state);
-        print_key(s->state);
-        ++count;
+        // print_key(s->state);
+        // ++count;
+        // print_board(s->state);
+        s->page = HPDF_AddPage(pdf);
+        HPDF_Page_SetWidth(s->page, 100);
+        HPDF_Page_SetHeight(s->page, 100);
+
+        HPDF_Page_BeginText(s->page);
+        HPDF_Page_SetFontAndSize(s->page, font, 10);
+        char state_str[BOARD_SIZE + 1];
+        memcpy(state_str, s->state, BOARD_SIZE);
+        state_str[BOARD_SIZE] = '\0';
+        HPDF_Page_ShowText(s->page, state_str);
+        HPDF_Page_EndText(s->page);
     }
 
-    printf("Generated %u boards\n", count);
+    // printf("New\n");
+    // board_inf_t *s;
+    // for(s = boards; s != NULL; s=s->hh.next) {
+    //     print_key(s->state);
+    // }
+
+    HPDF_SaveToFile(pdf, "out.pdf");
+    HPDF_Free(pdf);
+
+    // printf("Generated %u boards\n", count);
 
     return EXIT_SUCCESS;
 }

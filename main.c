@@ -121,6 +121,8 @@ void gen_child_boards(char *state, char player) {
     memcpy(board->state, state, BOARD_SIZE);
     board->next_move = player;
 
+    board->winner = 0;
+
     HASH_ADD(hh, boards, state, BOARD_SIZE, board);
 
     char other_player = (player == 'X') ? 'O' : 'X';
@@ -171,6 +173,10 @@ int main(int argc, char **argv) {
     // Compress PDF
     HPDF_SetCompressionMode (pdf, HPDF_COMP_ALL);
 
+    HPDF_Destination dst;
+    HPDF_Rect rect;
+    HPDF_Annotation annot;
+
     board_inf_t *s, *tmp;
     HASH_ITER(hh, boards, s, tmp) {
         // Create new page
@@ -217,6 +223,46 @@ int main(int argc, char **argv) {
                 }
 
                 HPDF_Page_Stroke(s->page);
+            }
+        }
+    }
+
+    HASH_ITER(hh, boards, s, tmp) {
+        // For now, don't add any links for won games
+        if(s->winner != 0) continue;
+
+        for(size_t i = 0; i < ROW; ++i) {
+            for(size_t j = 0; j < ROW; ++j) {
+                char cur = s->state[i * ROW + j];
+
+                if(cur != ' ') continue;
+
+                // Generate a rectangular area
+                rect.left = i * 100;
+                rect.right = rect.left + 100;
+                rect.top = j * 100;
+                rect.bottom = rect.top + 100;
+
+                board_inf_t *tmp = NULL;
+
+                // Find the state to which to link
+                char id[BOARD_SIZE] = {0};
+                memcpy(id, s->state, BOARD_SIZE);
+                id[i * ROW + j] = s->next_move;
+                HASH_FIND(hh, boards, id, BOARD_SIZE, tmp);
+
+                // This shouldn't happen (TM)
+                if(tmp == NULL) {
+                    printf("ERROR: Could not find id: ");
+                    print_key(id);
+
+                    return EXIT_FAILURE;
+                }
+
+                // Add a link to the page
+                dst = HPDF_Page_CreateDestination(tmp->page);
+                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, dst);
+                HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
             }
         }
     }

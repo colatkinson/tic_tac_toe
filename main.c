@@ -263,6 +263,7 @@ int main(int argc, char **argv) {
                 dst = HPDF_Page_CreateDestination(tmp->page);
                 annot = HPDF_Page_CreateLinkAnnot(s->page, rect, dst);
                 HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
+                HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
             }
         }
     }

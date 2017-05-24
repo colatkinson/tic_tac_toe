@@ -171,7 +171,28 @@ int main(int argc, char **argv) {
     }
 
     // Compress PDF
-    HPDF_SetCompressionMode (pdf, HPDF_COMP_ALL);
+    HPDF_SetCompressionMode(pdf, HPDF_COMP_ALL);
+
+    // Open in full screen mode
+    HPDF_SetPageMode(pdf, HPDF_PAGE_MODE_FULL_SCREEN);
+
+    HPDF_Font font = HPDF_GetFont(pdf, "Times-Roman", NULL);
+
+    HPDF_Page cover = HPDF_AddPage(pdf);
+    HPDF_Page_SetWidth(cover, ROW*100);
+    HPDF_Page_SetHeight(cover, ROW*100);
+
+    HPDF_Page_BeginText(cover);
+
+    HPDF_Page_SetFontAndSize(cover, font, ROW*16);
+    HPDF_Page_TextRect(cover, 0, ROW*75, ROW*100, 75, "The Complete Tic-Tac-Toe", HPDF_TALIGN_CENTER, NULL);
+
+    HPDF_Page_SetFontAndSize(cover, font, ROW*8);
+    HPDF_Page_TextRect(cover, 0, 75, ROW*100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_EndText(cover);
+
+    HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
+    HPDF_SetOpenAction(pdf, cover_dst);
 
     HPDF_Destination dst;
     HPDF_Rect rect;
@@ -267,6 +288,21 @@ int main(int argc, char **argv) {
             }
         }
     }
+
+    // Link from the cover to the first page
+    board_inf_t *empty_board = NULL;
+    HASH_FIND(hh, boards, state, BOARD_SIZE, empty_board);
+    if(empty_board == NULL) return EXIT_FAILURE;
+
+    rect.left = 0;
+    rect.right = ROW * 100;
+    rect.top = ROW * 100;
+    rect.bottom = 0;
+
+    dst = HPDF_Page_CreateDestination(empty_board->page);
+    annot = HPDF_Page_CreateLinkAnnot(cover, rect, dst);
+    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
+    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
 
     HPDF_SaveToFile(pdf, "out.pdf");
     HPDF_Free(pdf);

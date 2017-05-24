@@ -178,6 +178,7 @@ int main(int argc, char **argv) {
 
     HPDF_Font font = HPDF_GetFont(pdf, "Times-Roman", NULL);
 
+    // Generate cover
     HPDF_Page cover = HPDF_AddPage(pdf);
     HPDF_Page_SetWidth(cover, ROW*100);
     HPDF_Page_SetHeight(cover, ROW*100);
@@ -194,9 +195,76 @@ int main(int argc, char **argv) {
     HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
     HPDF_SetOpenAction(pdf, cover_dst);
 
-    HPDF_Destination dst;
+    // Link annotation variables
     HPDF_Rect rect;
+    rect.left = 0;
+    rect.right = ROW * 100;
+    rect.top = ROW * 100;
+    rect.bottom = 0;
+
     HPDF_Annotation annot;
+
+    // Generate X won page
+    HPDF_Page x_win = HPDF_AddPage(pdf);
+    HPDF_Page_SetWidth(x_win, ROW*100);
+    HPDF_Page_SetHeight(x_win, ROW*100);
+
+    HPDF_Page_BeginText(x_win);
+
+    HPDF_Page_SetFontAndSize(x_win, font, ROW*16);
+    HPDF_Page_TextRect(x_win, 0, ROW*75, ROW*100, 75, "X Won!", HPDF_TALIGN_CENTER, NULL);
+
+    HPDF_Page_SetFontAndSize(x_win, font, ROW*8);
+    HPDF_Page_TextRect(x_win, 0, 75, ROW*100, 0, "Click to Restart", HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_EndText(x_win);
+
+    HPDF_Destination x_win_dst = HPDF_Page_CreateDestination(x_win);
+
+    annot = HPDF_Page_CreateLinkAnnot(x_win, rect, cover_dst);
+    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
+    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
+
+    // Generate O won page
+    HPDF_Page o_win = HPDF_AddPage(pdf);
+    HPDF_Page_SetWidth(o_win, ROW*100);
+    HPDF_Page_SetHeight(o_win, ROW*100);
+
+    HPDF_Page_BeginText(o_win);
+
+    HPDF_Page_SetFontAndSize(o_win, font, ROW*16);
+    HPDF_Page_TextRect(o_win, 0, ROW*75, ROW*100, 75, "O Won!", HPDF_TALIGN_CENTER, NULL);
+
+    HPDF_Page_SetFontAndSize(o_win, font, ROW*8);
+    HPDF_Page_TextRect(o_win, 0, 75, ROW*100, 0, "Click to Restart", HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_EndText(o_win);
+
+    HPDF_Destination o_win_dst = HPDF_Page_CreateDestination(o_win);
+
+    annot = HPDF_Page_CreateLinkAnnot(o_win, rect, cover_dst);
+    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
+    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
+
+    // Generate draw page
+    HPDF_Page draw = HPDF_AddPage(pdf);
+    HPDF_Page_SetWidth(draw, ROW*100);
+    HPDF_Page_SetHeight(draw, ROW*100);
+
+    HPDF_Page_BeginText(draw);
+
+    HPDF_Page_SetFontAndSize(draw, font, ROW*16);
+    HPDF_Page_TextRect(draw, 0, ROW*75, ROW*100, 75, "It's a draw. Wow.", HPDF_TALIGN_CENTER, NULL);
+
+    HPDF_Page_SetFontAndSize(draw, font, ROW*8);
+    HPDF_Page_TextRect(draw, 0, 75, ROW*100, 0, "Click to Restart", HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_EndText(draw);
+
+    HPDF_Destination draw_dst = HPDF_Page_CreateDestination(draw);
+
+    annot = HPDF_Page_CreateLinkAnnot(draw, rect, cover_dst);
+    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
+    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
+
+    HPDF_Destination dst;
 
     board_inf_t *s, *tmp;
     HASH_ITER(hh, boards, s, tmp) {

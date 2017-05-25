@@ -8,10 +8,32 @@
 
 #define ROW 3
 #define BOARD_SIZE ROW * ROW
-// #define KEY_SIZE BOARD_SIZE + 1
+
+typedef struct move_list {
+    struct move_list *next;
+
+    struct board_inf *data;
+} move_list_t;
+
+void free_move_list(move_list_t **moves) {
+    if(moves == NULL || *moves == NULL) return;
+
+    move_list_t *head = *moves;
+    move_list_t *tmp = NULL;
+
+    while(head != NULL) {
+        tmp = head;
+        head = head->next;
+        free(tmp);
+    }
+
+    *moves = NULL;
+}
 
 typedef struct board_inf {
-    char moves[BOARD_SIZE];
+    move_list_t *moves_head;
+    move_list_t *moves_tail;
+
     char state[BOARD_SIZE];
     char next_move;
     char winner;
@@ -110,16 +132,18 @@ bool is_draw(char *state) {
     return true;
 }
 
-void gen_child_boards(char *state, char player) {
+board_inf_t *gen_child_boards(char *state, char player) {
     // Check if already exists
     board_inf_t *tmp;
     HASH_FIND(hh, boards, state, BOARD_SIZE, tmp);
-    if(tmp != NULL) return;
+    if(tmp != NULL) return tmp;
 
     // Make a new copy and put in hash table
     board_inf_t *board = (board_inf_t *) malloc(sizeof(board_inf_t));
     memcpy(board->state, state, BOARD_SIZE);
     board->next_move = player;
+    board->moves_head = NULL;
+    board->moves_tail = NULL;
 
     board->winner = 0;
 
@@ -130,26 +154,47 @@ void gen_child_boards(char *state, char player) {
     // Check if game is over
     if(is_won(state)) {
         board->winner = other_player;
-        return;
+        return board;
     } else if(is_draw(state)) {
         board->winner = ' ';
-        return;
+        return board;
     }
 
     // Recurse over possible moves
     for(size_t i = 0; i < BOARD_SIZE; ++i) {
-        if(state[i] != ' ') {
-            board->moves[i] = 0;
-            continue;
-        }
-
-        board->moves[i] = 1;
+        if(state[i] != ' ') continue;
 
         char new_state[BOARD_SIZE];
         memcpy(new_state, state, BOARD_SIZE);
         new_state[i] = player;
 
-        gen_child_boards(new_state, other_player);
+        board_inf_t *child_board = gen_child_boards(new_state, other_player);
+        if(child_board == NULL) continue;
+
+        move_list_t *move = (move_list_t *) malloc(sizeof(move_list_t));
+        move->next = NULL;
+        move->data = child_board;
+
+        if(board->moves_head == NULL) {
+            board->moves_head = move;
+        } else {
+            board->moves_tail->next = move;
+        }
+
+        board->moves_tail = move;
+    }
+
+    return board;
+}
+
+void print_move_list(move_list_t *head) {
+    move_list_t *cur = head;
+
+    while(cur != NULL) {
+        printf("\t");
+        print_key(cur->data->state);
+
+        cur = cur->next;
     }
 }
 
@@ -333,11 +378,19 @@ int main(int argc, char **argv) {
             continue;
         }
 
+        move_list_t *tmp_head = s->moves_head;
+
         for(size_t i = 0; i < ROW; ++i) {
             for(size_t j = 0; j < ROW; ++j) {
                 char cur = s->state[i * ROW + j];
 
                 if(cur != ' ') continue;
+
+                // This Shouldn't Happen II: Electric Boogaloo
+                if(tmp_head == NULL) {
+                    printf("ERROR: Too few list elements\n");
+                    return EXIT_FAILURE;
+                }
 
                 // Generate a rectangular area
                 rect.left = i * 100;
@@ -345,21 +398,9 @@ int main(int argc, char **argv) {
                 rect.top = j * 100;
                 rect.bottom = rect.top + 100;
 
-                board_inf_t *tmp = NULL;
+                board_inf_t *tmp = tmp_head->data;
 
-                // Find the state to which to link
-                char id[BOARD_SIZE] = {0};
-                memcpy(id, s->state, BOARD_SIZE);
-                id[i * ROW + j] = s->next_move;
-                HASH_FIND(hh, boards, id, BOARD_SIZE, tmp);
-
-                // This shouldn't happen (TM)
-                if(tmp == NULL) {
-                    printf("ERROR: Could not find id: ");
-                    print_key(id);
-
-                    return EXIT_FAILURE;
-                }
+                tmp_head = tmp_head->next;
 
                 // Add a link to the page
                 dst = HPDF_Page_CreateDestination(tmp->page);
@@ -390,6 +431,7 @@ int main(int argc, char **argv) {
 
     HASH_ITER(hh, boards, s, tmp) {
         HASH_DEL(boards, s);
+        free_move_list(&(s->moves_head));
         free(s);
     }
 

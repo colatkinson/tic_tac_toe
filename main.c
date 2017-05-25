@@ -313,7 +313,25 @@ int main(int argc, char **argv) {
 
     HASH_ITER(hh, boards, s, tmp) {
         // For now, don't add any links for won games
-        if(s->winner != 0) continue;
+        if(s->winner != 0) {
+            rect.left = 0;
+            rect.right = ROW * 100;
+            rect.top = ROW * 100;
+            rect.bottom = 0;
+
+            if(s->winner == 'X') {
+                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, x_win_dst);
+            } else if(s->winner == 'O') {
+                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, o_win_dst);
+            } else {
+                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, draw_dst);
+            }
+
+            HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
+            HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
+
+            continue;
+        }
 
         for(size_t i = 0; i < ROW; ++i) {
             for(size_t j = 0; j < ROW; ++j) {

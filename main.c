@@ -273,26 +273,21 @@ int main(int argc, char **argv) {
         HPDF_Page_SetWidth(s->page, ROW*100);
         HPDF_Page_SetHeight(s->page, ROW*100);
 
-        // Alternate colors
-        bool odd = false;
 
         // Draw background
-        for(size_t i = 0; i < ROW; ++i) {
-            for(size_t j = 0; j < ROW; ++j) {
-                if(odd) {
-                    HPDF_Page_SetRGBFill(s->page, 1, 1, 1);
-                } else {
-                    HPDF_Page_SetRGBFill(s->page, 0.95, 0.95, 0.95);
-                }
-                odd = !odd;
+        HPDF_Page_SetGrayFill(s->page, 1);
+        HPDF_Page_Rectangle(s->page, 0, 0, ROW*100, ROW*100);
+        HPDF_Page_Fill(s->page);
 
-                HPDF_Page_Rectangle(s->page, i * 100, j * 100, 100, 100);
-                HPDF_Page_Fill(s->page);
-            }
+        // Draw graw boxes
+        HPDF_Page_SetGrayFill(s->page, 0.95);
+        for(size_t i = 0; i < BOARD_SIZE; i += 2) {
+            HPDF_Page_Rectangle(s->page, (i % ROW) * 100, (i / ROW) * 100, 100, 100);
+            HPDF_Page_Fill(s->page);
         }
 
         // Now to draw the marks
-        HPDF_Page_SetRGBStroke(s->page, 0.25, 0.25, 0.25);
+        HPDF_Page_SetGrayStroke(s->page, 0.25);
         HPDF_Page_SetLineWidth(s->page, 5);
 
         for(size_t i = 0; i < ROW; ++i) {

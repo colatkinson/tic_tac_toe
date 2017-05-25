@@ -1,6 +1,7 @@
 .clang_complete
 main
 *.pdf
+massif.out.*
 
 # Prerequisites
 *.d

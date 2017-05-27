@@ -43,10 +43,6 @@ typedef struct board_inf {
     UT_hash_handle hh;
 } board_inf_t;
 
-// Hash table
-board_inf_t *boards = NULL;
-board_inf_t *mm_boards = NULL;
-
 void print_board(char *state) {
     for(size_t i = 0; i < ROW + 4; ++i) {
         printf("_");
@@ -207,7 +203,7 @@ void print_move_list(move_list_t *head) {
     }
 }
 
-board_inf_t *gen_child_boards(char *state, char player, bool ai) {
+board_inf_t *gen_child_boards(char *state, char player, bool ai, board_inf_t *boards) {
     // Check if already exists
     board_inf_t *tmp;
     HASH_FIND(hh, boards, state, BOARD_SIZE, tmp);
@@ -227,7 +223,7 @@ board_inf_t *gen_child_boards(char *state, char player, bool ai) {
         new_state[move_ind] = player;
 
         // Only add the state with the move already made to the board
-        return gen_child_boards(new_state, other_player, ai);
+        return gen_child_boards(new_state, other_player, ai, boards);
     }
 
     // Make a new copy and put in hash table
@@ -258,7 +254,7 @@ board_inf_t *gen_child_boards(char *state, char player, bool ai) {
         memcpy(new_state, state, BOARD_SIZE);
         new_state[i] = player;
 
-        board_inf_t *child_board = gen_child_boards(new_state, other_player, ai);
+        board_inf_t *child_board = gen_child_boards(new_state, other_player, ai, boards);
         if(child_board == NULL) continue;
 
         move_list_t *move = (move_list_t *) malloc(sizeof(move_list_t));
@@ -505,9 +501,11 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
 }
 
 int main(int argc, char **argv) {
+    board_inf_t *boards = NULL;
+
     char state[10] = "         ";
 
-    board_inf_t *mm = gen_child_boards(state, 'X', true);
+    board_inf_t *mm = gen_child_boards(state, 'X', true, boards);
 
     size_t count = 0;
     board_inf_t *s, *tmp;

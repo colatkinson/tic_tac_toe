@@ -2,6 +2,7 @@
 main
 *.pdf
 massif.out.*
+build/
 
 # Prerequisites
 *.d

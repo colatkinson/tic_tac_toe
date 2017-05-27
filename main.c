@@ -12,7 +12,7 @@
 typedef struct move_list {
     struct move_list *next;
 
-    struct board_inf *data;
+    void *data;
 } move_list_t;
 
 void free_move_list(move_list_t **moves) {
@@ -45,9 +45,9 @@ typedef struct board_inf {
 
 // Hash table
 board_inf_t *boards = NULL;
+board_inf_t *mm_boards = NULL;
 
 void print_board(char *state) {
-    // printf(" ");
     for(size_t i = 0; i < ROW + 4; ++i) {
         printf("_");
     }
@@ -187,12 +187,146 @@ board_inf_t *gen_child_boards(char *state, char player) {
     return board;
 }
 
+int32_t minimax(char *state, char player, int32_t *out) {
+    char other_player = (player == 'X') ? 'O' : 'X';
+
+    // If the game is over, you've reached the base case
+    if(is_won(state)) {
+        if(other_player == 'O')
+            return +1;
+        else
+            return -1;
+    } else if(is_draw(state)) {
+        return 0;
+    }
+
+    int32_t best = 0;
+    int32_t best_ind = -1;
+
+    // If it's the AI's turn, maximize score
+    // If it's the human's turn, minimize score
+    if(player == 'O') {
+        best = INT32_MIN;
+
+        // Iterate over possible moves
+        for(int32_t i = 0; i < BOARD_SIZE; ++i) {
+            if(state[i] != ' ') continue;
+
+            char new_state[BOARD_SIZE] = {0};
+            memcpy(new_state, state, BOARD_SIZE);
+            new_state[i] = player;
+
+            // Recursion!
+            int32_t val = minimax(new_state, other_player, NULL);
+
+            if(val > best) {
+                best = val;
+                best_ind = i;
+            }
+        }
+    } else {
+        best = INT32_MAX;
+
+        // Iterate over possible moves
+        for(int32_t i = 0; i < BOARD_SIZE; ++i) {
+            if(state[i] != ' ') continue;
+
+            char new_state[BOARD_SIZE] = {0};
+            memcpy(new_state, state, BOARD_SIZE);
+            new_state[i] = player;
+
+            // Recursion!
+            int32_t val = minimax(new_state, other_player, NULL);
+
+            if(val < best) {
+                best = val;
+                best_ind = i;
+            }
+        }
+    }
+
+    // If it's the top level, return the move to make
+    if(out != NULL) *out = best_ind;
+
+    return best;
+}
+
+board_inf_t *gen_mm_boards(char *state, char player) {
+    // Check if already exists
+    board_inf_t *tmp;
+    HASH_FIND(hh, mm_boards, state, BOARD_SIZE, tmp);
+    if(tmp != NULL) return tmp;
+
+    char other_player = (player == 'X') ? 'O' : 'X';
+
+    // If it's the AI's turn, run minimax
+    if(player == 'O') {
+        // Determine the best move to make
+        int32_t move_ind = -1;
+        minimax(state, 'O', &move_ind);
+
+        // Make that move
+        char new_state[BOARD_SIZE];
+        memcpy(new_state, state, BOARD_SIZE);
+        new_state[move_ind] = player;
+
+        // Only add the state with the move already made to the board
+        return gen_mm_boards(new_state, other_player);
+    }
+
+    // Make a new copy and put in hash table
+    board_inf_t *board = (board_inf_t *) malloc(sizeof(board_inf_t));
+    memcpy(board->state, state, BOARD_SIZE);
+    board->next_move = player;
+    board->moves_head = NULL;
+    board->moves_tail = NULL;
+
+    board->winner = 0;
+
+    HASH_ADD(hh, mm_boards, state, BOARD_SIZE, board);
+
+    // Check if game is over
+    if(is_won(state)) {
+        board->winner = other_player;
+        return board;
+    } else if(is_draw(state)) {
+        board->winner = ' ';
+        return board;
+    }
+
+    // Recurse over possible moves
+    for(size_t i = 0; i < BOARD_SIZE; ++i) {
+        if(state[i] != ' ') continue;
+
+        char new_state[BOARD_SIZE];
+        memcpy(new_state, state, BOARD_SIZE);
+        new_state[i] = player;
+
+        board_inf_t *child_board = gen_mm_boards(new_state, other_player);
+        if(child_board == NULL) continue;
+
+        move_list_t *move = (move_list_t *) malloc(sizeof(move_list_t));
+        move->next = NULL;
+        move->data = child_board;
+
+        if(board->moves_head == NULL) {
+            board->moves_head = move;
+        } else {
+            board->moves_tail->next = move;
+        }
+
+        board->moves_tail = move;
+    }
+
+    return board;
+}
+
 void print_move_list(move_list_t *head) {
     move_list_t *cur = head;
 
     while(cur != NULL) {
         printf("\t");
-        print_key(cur->data->state);
+        print_key(((board_inf_t *) cur->data)->state);
 
         cur = cur->next;
     }
@@ -203,28 +337,23 @@ void error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data)
                 (HPDF_UINT)detail_no);
 }
 
-int main(int argc, char **argv) {
-    char state[10] = "         ";
-
-    // Build board tree
-    gen_child_boards(state, 'X');
-
-    HPDF_Doc pdf = HPDF_New(error_handler, NULL);
+int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
+    *pdf = HPDF_New(error_handler, NULL);
     if(!pdf) {
         perror("Cold not create PdfDoc object");
         return EXIT_FAILURE;
     }
 
     // Compress PDF
-    HPDF_SetCompressionMode(pdf, HPDF_COMP_ALL);
+    HPDF_SetCompressionMode(*pdf, HPDF_COMP_ALL);
 
     // Open in full screen mode
-    HPDF_SetPageMode(pdf, HPDF_PAGE_MODE_FULL_SCREEN);
+    HPDF_SetPageMode(*pdf, HPDF_PAGE_MODE_FULL_SCREEN);
 
-    HPDF_Font font = HPDF_GetFont(pdf, "Times-Roman", NULL);
+    HPDF_Font font = HPDF_GetFont(*pdf, "Times-Roman", NULL);
 
     // Generate cover
-    HPDF_Page cover = HPDF_AddPage(pdf);
+    HPDF_Page cover = HPDF_AddPage(*pdf);
     HPDF_Page_SetWidth(cover, ROW*100);
     HPDF_Page_SetHeight(cover, ROW*100);
 
@@ -238,7 +367,7 @@ int main(int argc, char **argv) {
     HPDF_Page_EndText(cover);
 
     HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
-    HPDF_SetOpenAction(pdf, cover_dst);
+    HPDF_SetOpenAction(*pdf, cover_dst);
 
     // Link annotation variables
     HPDF_Rect rect;
@@ -250,7 +379,7 @@ int main(int argc, char **argv) {
     HPDF_Annotation annot;
 
     // Generate X won page
-    HPDF_Page x_win = HPDF_AddPage(pdf);
+    HPDF_Page x_win = HPDF_AddPage(*pdf);
     HPDF_Page_SetWidth(x_win, ROW*100);
     HPDF_Page_SetHeight(x_win, ROW*100);
 
@@ -270,7 +399,7 @@ int main(int argc, char **argv) {
     HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
 
     // Generate O won page
-    HPDF_Page o_win = HPDF_AddPage(pdf);
+    HPDF_Page o_win = HPDF_AddPage(*pdf);
     HPDF_Page_SetWidth(o_win, ROW*100);
     HPDF_Page_SetHeight(o_win, ROW*100);
 
@@ -290,7 +419,7 @@ int main(int argc, char **argv) {
     HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
 
     // Generate draw page
-    HPDF_Page draw = HPDF_AddPage(pdf);
+    HPDF_Page draw = HPDF_AddPage(*pdf);
     HPDF_Page_SetWidth(draw, ROW*100);
     HPDF_Page_SetHeight(draw, ROW*100);
 
@@ -314,7 +443,7 @@ int main(int argc, char **argv) {
     board_inf_t *s, *tmp;
     HASH_ITER(hh, boards, s, tmp) {
         // Create new page
-        s->page = HPDF_AddPage(pdf);
+        s->page = HPDF_AddPage(*pdf);
         HPDF_Page_SetWidth(s->page, ROW*100);
         HPDF_Page_SetHeight(s->page, ROW*100);
 
@@ -413,7 +542,8 @@ int main(int argc, char **argv) {
 
     // Link from the cover to the first page
     board_inf_t *empty_board = NULL;
-    HASH_FIND(hh, boards, state, BOARD_SIZE, empty_board);
+    char empty_state[10] = "         ";
+    HASH_FIND(hh, boards, empty_state, BOARD_SIZE, empty_board);
     if(empty_board == NULL) return EXIT_FAILURE;
 
     rect.left = 0;
@@ -426,11 +556,28 @@ int main(int argc, char **argv) {
     HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
     HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
 
+    return EXIT_SUCCESS;
+}
+
+int main(int argc, char **argv) {
+    char state[10] = "         ";
+
+    board_inf_t *mm = gen_mm_boards(state, 'X');
+
+    size_t count = 0;
+    board_inf_t *s, *tmp;
+    HASH_ITER(hh, mm_boards, s, tmp) {
+        ++count;
+    }
+
+    HPDF_Doc pdf = NULL;
+    gen_pdf(mm, &pdf);
+
     HPDF_SaveToFile(pdf, "out.pdf");
     HPDF_Free(pdf);
 
-    HASH_ITER(hh, boards, s, tmp) {
-        HASH_DEL(boards, s);
+    HASH_ITER(hh, mm_boards, s, tmp) {
+        HASH_DEL(mm_boards, s);
         free_move_list(&(s->moves_head));
         free(s);
     }

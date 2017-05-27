@@ -132,61 +132,6 @@ bool is_draw(char *state) {
     return true;
 }
 
-board_inf_t *gen_child_boards(char *state, char player) {
-    // Check if already exists
-    board_inf_t *tmp;
-    HASH_FIND(hh, boards, state, BOARD_SIZE, tmp);
-    if(tmp != NULL) return tmp;
-
-    // Make a new copy and put in hash table
-    board_inf_t *board = (board_inf_t *) malloc(sizeof(board_inf_t));
-    memcpy(board->state, state, BOARD_SIZE);
-    board->next_move = player;
-    board->moves_head = NULL;
-    board->moves_tail = NULL;
-
-    board->winner = 0;
-
-    HASH_ADD(hh, boards, state, BOARD_SIZE, board);
-
-    char other_player = (player == 'X') ? 'O' : 'X';
-
-    // Check if game is over
-    if(is_won(state)) {
-        board->winner = other_player;
-        return board;
-    } else if(is_draw(state)) {
-        board->winner = ' ';
-        return board;
-    }
-
-    // Recurse over possible moves
-    for(size_t i = 0; i < BOARD_SIZE; ++i) {
-        if(state[i] != ' ') continue;
-
-        char new_state[BOARD_SIZE];
-        memcpy(new_state, state, BOARD_SIZE);
-        new_state[i] = player;
-
-        board_inf_t *child_board = gen_child_boards(new_state, other_player);
-        if(child_board == NULL) continue;
-
-        move_list_t *move = (move_list_t *) malloc(sizeof(move_list_t));
-        move->next = NULL;
-        move->data = child_board;
-
-        if(board->moves_head == NULL) {
-            board->moves_head = move;
-        } else {
-            board->moves_tail->next = move;
-        }
-
-        board->moves_tail = move;
-    }
-
-    return board;
-}
-
 int32_t minimax(char *state, char player, int32_t *out) {
     char other_player = (player == 'X') ? 'O' : 'X';
 
@@ -251,16 +196,27 @@ int32_t minimax(char *state, char player, int32_t *out) {
     return best;
 }
 
-board_inf_t *gen_mm_boards(char *state, char player) {
+void print_move_list(move_list_t *head) {
+    move_list_t *cur = head;
+
+    while(cur != NULL) {
+        printf("\t");
+        print_key(((board_inf_t *) cur->data)->state);
+
+        cur = cur->next;
+    }
+}
+
+board_inf_t *gen_child_boards(char *state, char player, bool ai) {
     // Check if already exists
     board_inf_t *tmp;
-    HASH_FIND(hh, mm_boards, state, BOARD_SIZE, tmp);
+    HASH_FIND(hh, boards, state, BOARD_SIZE, tmp);
     if(tmp != NULL) return tmp;
 
     char other_player = (player == 'X') ? 'O' : 'X';
 
     // If it's the AI's turn, run minimax
-    if(player == 'O') {
+    if(ai && player == 'O') {
         // Determine the best move to make
         int32_t move_ind = -1;
         minimax(state, 'O', &move_ind);
@@ -271,7 +227,7 @@ board_inf_t *gen_mm_boards(char *state, char player) {
         new_state[move_ind] = player;
 
         // Only add the state with the move already made to the board
-        return gen_mm_boards(new_state, other_player);
+        return gen_child_boards(new_state, other_player, ai);
     }
 
     // Make a new copy and put in hash table
@@ -283,7 +239,7 @@ board_inf_t *gen_mm_boards(char *state, char player) {
 
     board->winner = 0;
 
-    HASH_ADD(hh, mm_boards, state, BOARD_SIZE, board);
+    HASH_ADD(hh, boards, state, BOARD_SIZE, board);
 
     // Check if game is over
     if(is_won(state)) {
@@ -302,7 +258,7 @@ board_inf_t *gen_mm_boards(char *state, char player) {
         memcpy(new_state, state, BOARD_SIZE);
         new_state[i] = player;
 
-        board_inf_t *child_board = gen_mm_boards(new_state, other_player);
+        board_inf_t *child_board = gen_child_boards(new_state, other_player, ai);
         if(child_board == NULL) continue;
 
         move_list_t *move = (move_list_t *) malloc(sizeof(move_list_t));
@@ -319,17 +275,6 @@ board_inf_t *gen_mm_boards(char *state, char player) {
     }
 
     return board;
-}
-
-void print_move_list(move_list_t *head) {
-    move_list_t *cur = head;
-
-    while(cur != NULL) {
-        printf("\t");
-        print_key(((board_inf_t *) cur->data)->state);
-
-        cur = cur->next;
-    }
 }
 
 void error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data) {
@@ -562,11 +507,11 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
 int main(int argc, char **argv) {
     char state[10] = "         ";
 
-    board_inf_t *mm = gen_mm_boards(state, 'X');
+    board_inf_t *mm = gen_child_boards(state, 'X', true);
 
     size_t count = 0;
     board_inf_t *s, *tmp;
-    HASH_ITER(hh, mm_boards, s, tmp) {
+    HASH_ITER(hh, boards, s, tmp) {
         ++count;
     }
 
@@ -576,8 +521,8 @@ int main(int argc, char **argv) {
     HPDF_SaveToFile(pdf, "out.pdf");
     HPDF_Free(pdf);
 
-    HASH_ITER(hh, mm_boards, s, tmp) {
-        HASH_DEL(mm_boards, s);
+    HASH_ITER(hh, boards, s, tmp) {
+        HASH_DEL(boards, s);
         free_move_list(&(s->moves_head));
         free(s);
     }

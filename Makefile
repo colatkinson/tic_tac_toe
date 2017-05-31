@@ -1,5 +1,5 @@
 .PHONY: src
 
 src:
-	mkdir build
+	mkdir -p build
 	$(MAKE) -C src

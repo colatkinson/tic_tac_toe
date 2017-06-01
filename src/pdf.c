@@ -24,6 +24,32 @@ HPDF_Page gen_cover(HPDF_Doc *pdf, HPDF_Font font, const char *title) {
     return cover;
 }
 
+int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *msg) {
+    HPDF_Page_GSave(page);
+    HPDF_ExtGState gstate = HPDF_CreateExtGState(*pdf);
+    HPDF_ExtGState_SetAlphaFill(gstate, 0.75);
+    HPDF_Page_SetExtGState(page, gstate);
+
+    HPDF_Page_SetGrayFill(page, 1);
+    HPDF_Page_Rectangle(page, 0, 0, ROW*100, ROW*100);
+    HPDF_Page_Fill(page);
+
+    HPDF_Page_GRestore(page);
+
+    HPDF_Page_SetGrayFill(page, 0.25);
+
+    HPDF_Page_BeginText(page);
+
+    HPDF_Page_SetFontAndSize(page, font, ROW*16);
+    HPDF_Page_TextRect(page, 0, ROW*75, ROW*100, 75, msg, HPDF_TALIGN_CENTER, NULL);
+
+    HPDF_Page_SetFontAndSize(page, font, ROW*8);
+    HPDF_Page_TextRect(page, 0, 75, ROW*100, 0, "Click to Continue", HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_EndText(page);
+
+    return EXIT_SUCCESS;
+}
+
 int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     *pdf = HPDF_New(error_handler, NULL);
     if(!pdf) {
@@ -167,6 +193,8 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
             rect.right = ROW * 100;
             rect.top = ROW * 100;
             rect.bottom = 0;
+
+            draw_game_over(pdf, s->page, font, "Hello");
 
             if(s->winner == 'X') {
                 annot = HPDF_Page_CreateLinkAnnot(s->page, rect, x_win_dst);

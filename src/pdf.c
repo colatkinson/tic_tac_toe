@@ -7,6 +7,23 @@ void error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data)
                 (HPDF_UINT)detail_no);
 }
 
+HPDF_Page gen_cover(HPDF_Doc *pdf, HPDF_Font font, const char *title) {
+    HPDF_Page cover = HPDF_AddPage(*pdf);
+    HPDF_Page_SetWidth(cover, ROW*100);
+    HPDF_Page_SetHeight(cover, ROW*100);
+
+    HPDF_Page_BeginText(cover);
+
+    HPDF_Page_SetFontAndSize(cover, font, ROW*16);
+    HPDF_Page_TextRect(cover, 0, ROW*75, ROW*100, 75, title, HPDF_TALIGN_CENTER, NULL);
+
+    HPDF_Page_SetFontAndSize(cover, font, ROW*8);
+    HPDF_Page_TextRect(cover, 0, 75, ROW*100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_EndText(cover);
+
+    return cover;
+}
+
 int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     *pdf = HPDF_New(error_handler, NULL);
     if(!pdf) {
@@ -23,19 +40,7 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     HPDF_Font font = HPDF_GetFont(*pdf, "Times-Roman", NULL);
 
     // Generate cover
-    HPDF_Page cover = HPDF_AddPage(*pdf);
-    HPDF_Page_SetWidth(cover, ROW*100);
-    HPDF_Page_SetHeight(cover, ROW*100);
-
-    HPDF_Page_BeginText(cover);
-
-    HPDF_Page_SetFontAndSize(cover, font, ROW*16);
-    HPDF_Page_TextRect(cover, 0, ROW*75, ROW*100, 75, "The Complete Tic-Tac-Toe", HPDF_TALIGN_CENTER, NULL);
-
-    HPDF_Page_SetFontAndSize(cover, font, ROW*8);
-    HPDF_Page_TextRect(cover, 0, 75, ROW*100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
-    HPDF_Page_EndText(cover);
-
+    HPDF_Page cover = gen_cover(pdf, font, "Test Title");
     HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
     HPDF_SetOpenAction(*pdf, cover_dst);
 

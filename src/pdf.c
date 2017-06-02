@@ -27,7 +27,7 @@ HPDF_Page gen_cover(HPDF_Doc *pdf, HPDF_Font font, const char *title) {
 int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *msg) {
     HPDF_Page_GSave(page);
     HPDF_ExtGState gstate = HPDF_CreateExtGState(*pdf);
-    HPDF_ExtGState_SetAlphaFill(gstate, 0.75);
+    HPDF_ExtGState_SetAlphaFill(gstate, 0.90);
     HPDF_Page_SetExtGState(page, gstate);
 
     HPDF_Page_SetGrayFill(page, 1);
@@ -66,7 +66,7 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     HPDF_Font font = HPDF_GetFont(*pdf, "Times-Roman", NULL);
 
     // Generate cover
-    HPDF_Page cover = gen_cover(pdf, font, "Test Title");
+    HPDF_Page cover = gen_cover(pdf, font, "The Complete Tic-Tac-Toe");
     HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
     HPDF_SetOpenAction(*pdf, cover_dst);
 
@@ -79,65 +79,7 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
 
     HPDF_Annotation annot;
 
-    // Generate X won page
-    HPDF_Page x_win = HPDF_AddPage(*pdf);
-    HPDF_Page_SetWidth(x_win, ROW*100);
-    HPDF_Page_SetHeight(x_win, ROW*100);
 
-    HPDF_Page_BeginText(x_win);
-
-    HPDF_Page_SetFontAndSize(x_win, font, ROW*16);
-    HPDF_Page_TextRect(x_win, 0, ROW*75, ROW*100, 75, "X Won!", HPDF_TALIGN_CENTER, NULL);
-
-    HPDF_Page_SetFontAndSize(x_win, font, ROW*8);
-    HPDF_Page_TextRect(x_win, 0, 75, ROW*100, 0, "Click to Restart", HPDF_TALIGN_CENTER, NULL);
-    HPDF_Page_EndText(x_win);
-
-    HPDF_Destination x_win_dst = HPDF_Page_CreateDestination(x_win);
-
-    annot = HPDF_Page_CreateLinkAnnot(x_win, rect, cover_dst);
-    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
-    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
-
-    // Generate O won page
-    HPDF_Page o_win = HPDF_AddPage(*pdf);
-    HPDF_Page_SetWidth(o_win, ROW*100);
-    HPDF_Page_SetHeight(o_win, ROW*100);
-
-    HPDF_Page_BeginText(o_win);
-
-    HPDF_Page_SetFontAndSize(o_win, font, ROW*16);
-    HPDF_Page_TextRect(o_win, 0, ROW*75, ROW*100, 75, "O Won!", HPDF_TALIGN_CENTER, NULL);
-
-    HPDF_Page_SetFontAndSize(o_win, font, ROW*8);
-    HPDF_Page_TextRect(o_win, 0, 75, ROW*100, 0, "Click to Restart", HPDF_TALIGN_CENTER, NULL);
-    HPDF_Page_EndText(o_win);
-
-    HPDF_Destination o_win_dst = HPDF_Page_CreateDestination(o_win);
-
-    annot = HPDF_Page_CreateLinkAnnot(o_win, rect, cover_dst);
-    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
-    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
-
-    // Generate draw page
-    HPDF_Page draw = HPDF_AddPage(*pdf);
-    HPDF_Page_SetWidth(draw, ROW*100);
-    HPDF_Page_SetHeight(draw, ROW*100);
-
-    HPDF_Page_BeginText(draw);
-
-    HPDF_Page_SetFontAndSize(draw, font, ROW*16);
-    HPDF_Page_TextRect(draw, 0, ROW*75, ROW*100, 75, "It's a draw. Wow.", HPDF_TALIGN_CENTER, NULL);
-
-    HPDF_Page_SetFontAndSize(draw, font, ROW*8);
-    HPDF_Page_TextRect(draw, 0, 75, ROW*100, 0, "Click to Restart", HPDF_TALIGN_CENTER, NULL);
-    HPDF_Page_EndText(draw);
-
-    HPDF_Destination draw_dst = HPDF_Page_CreateDestination(draw);
-
-    annot = HPDF_Page_CreateLinkAnnot(draw, rect, cover_dst);
-    HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
-    HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
 
     HPDF_Destination dst;
 
@@ -147,7 +89,6 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
         s->page = HPDF_AddPage(*pdf);
         HPDF_Page_SetWidth(s->page, ROW*100);
         HPDF_Page_SetHeight(s->page, ROW*100);
-
 
         // Draw background
         HPDF_Page_SetGrayFill(s->page, 1);
@@ -194,15 +135,15 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
             rect.top = ROW * 100;
             rect.bottom = 0;
 
-            draw_game_over(pdf, s->page, font, "Hello");
-
             if(s->winner == 'X') {
-                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, x_win_dst);
+                draw_game_over(pdf, s->page, font, "X Won!");
             } else if(s->winner == 'O') {
-                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, o_win_dst);
+                draw_game_over(pdf, s->page, font, "O Won!");
             } else {
-                annot = HPDF_Page_CreateLinkAnnot(s->page, rect, draw_dst);
+                draw_game_over(pdf, s->page, font, "It's a draw. Wow.");
             }
+
+            annot = HPDF_Page_CreateLinkAnnot(s->page, rect, cover_dst);
 
             HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
             HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);

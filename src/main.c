@@ -64,9 +64,9 @@ bool is_won(char *state) {
         uint8_t consec_x = 0, consec_o = 0;
 
         for(size_t j = 0; j < ROW; ++j) {
-            if(state[i * 3 + j] == 'X') {
+            if(state[i * ROW + j] == 'X') {
                 consec_x += 1;
-            } else if(state[i * 3 + j] == 'O') {
+            } else if(state[i * ROW + j] == 'O') {
                 consec_o += 1;
             }
         }
@@ -79,9 +79,9 @@ bool is_won(char *state) {
         uint8_t consec_x = 0, consec_o = 0;
 
         for(size_t j = 0; j < ROW; ++j) {
-            if(state[i + j * 3] == 'X') {
+            if(state[i + j * ROW] == 'X') {
                 consec_x += 1;
-            } else if(state[i + j * 3] == 'O') {
+            } else if(state[i + j * ROW] == 'O') {
                 consec_o += 1;
             }
         }
@@ -90,11 +90,19 @@ bool is_won(char *state) {
     }
 
     // Check top-left to bottom-right diagonal
-    uint16_t tl_diag = state[0] + state[4] + state[8];
+    // uint16_t tl_diag = state[0] + state[4] + state[8];
+    uint16_t tl_diag = 0;
+    for(size_t i = 0; i < BOARD_SIZE; i += ROW + 1) {
+        tl_diag += state[i];
+    }
     if(tl_diag == 'X' * ROW || tl_diag == 'O' * ROW) return true;
 
     // Check top-right to bottom-left diagonal
-    uint16_t tr_diag = state[2] + state[4] + state[6];
+    // uint16_t tr_diag = state[2] + state[4] + state[6];
+    uint16_t tr_diag = 0;
+    for(size_t i = ROW - 1; i < BOARD_SIZE - ROW + 1; i += ROW - 1) {
+        tr_diag += state[i];
+    }
     if(tr_diag == 'X' * ROW || tr_diag == 'O' * ROW) return true;
 
     return false;
@@ -254,26 +262,38 @@ board_inf_t *gen_child_boards(char *state, char player, bool ai, board_inf_t *bo
 }
 
 int main(int argc, char **argv) {
-    board_inf_t *boards = NULL;
+    // board_inf_t *boards = NULL;
 
-    char state[10] = "         ";
+    // char state[10] = "         ";
+    char state[BOARD_SIZE];
+    memset(state, ' ', BOARD_SIZE);
 
-    board_inf_t *mm = gen_child_boards(state, 'X', true, boards);
+    printf("Generating boards... ");
+    fflush(stdout);
+
+    board_inf_t *mm = gen_child_boards(state, 'X', true, NULL);
+
+    printf("DONE\n");
 
     size_t count = 0;
     board_inf_t *s, *tmp;
-    HASH_ITER(hh, boards, s, tmp) {
+    HASH_ITER(hh, mm, s, tmp) {
         ++count;
     }
+
+    printf("Generating PDF... ");
+    fflush(stdout);
 
     HPDF_Doc pdf = NULL;
     gen_pdf(mm, &pdf);
 
+    printf("DONE\n");
+
     HPDF_SaveToFile(pdf, "out.pdf");
     HPDF_Free(pdf);
 
-    HASH_ITER(hh, boards, s, tmp) {
-        HASH_DEL(boards, s);
+    HASH_ITER(hh, mm, s, tmp) {
+        HASH_DEL(mm, s);
         free_move_list(&(s->moves_head));
         free(s);
     }

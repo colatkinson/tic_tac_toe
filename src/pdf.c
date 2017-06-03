@@ -78,9 +78,6 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     rect.bottom = 0;
 
     HPDF_Annotation annot;
-
-
-
     HPDF_Destination dst;
 
     board_inf_t *s, *tmp;
@@ -186,7 +183,8 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
 
     // Link from the cover to the first page
     board_inf_t *empty_board = NULL;
-    char empty_state[10] = "         ";
+    char empty_state[BOARD_SIZE];
+    memset(empty_state, ' ', BOARD_SIZE);
     HASH_FIND(hh, boards, empty_state, BOARD_SIZE, empty_board);
     if(empty_board == NULL) return EXIT_FAILURE;
 

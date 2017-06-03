@@ -116,7 +116,7 @@ bool is_draw(char *state) {
     return true;
 }
 
-int32_t minimax(char *state, char player, int32_t *out) {
+int32_t minimax(char *state, char player, int32_t alpha, int32_t beta, int32_t *out) {
     char other_player = (player == 'X') ? 'O' : 'X';
 
     // If the game is over, you've reached the base case
@@ -146,12 +146,17 @@ int32_t minimax(char *state, char player, int32_t *out) {
             new_state[i] = player;
 
             // Recursion!
-            int32_t val = minimax(new_state, other_player, NULL);
+            int32_t val = minimax(new_state, other_player, alpha, beta, NULL);
 
             if(val > best) {
                 best = val;
                 best_ind = i;
             }
+
+            // Alpha-Beta pruning
+            if(val > alpha) alpha = val;
+
+            if(beta <= alpha) break;
         }
     } else {
         best = INT32_MAX;
@@ -165,12 +170,17 @@ int32_t minimax(char *state, char player, int32_t *out) {
             new_state[i] = player;
 
             // Recursion!
-            int32_t val = minimax(new_state, other_player, NULL);
+            int32_t val = minimax(new_state, other_player, alpha, beta, NULL);
 
             if(val < best) {
                 best = val;
                 best_ind = i;
             }
+
+            // Alpha-Beta pruning
+            if(val < beta) beta = val;
+
+            if(beta <= alpha) break;
         }
     }
 
@@ -203,7 +213,7 @@ board_inf_t *gen_child_boards(char *state, char player, bool ai, board_inf_t *bo
     if(ai && player == 'O') {
         // Determine the best move to make
         int32_t move_ind = -1;
-        minimax(state, 'O', &move_ind);
+        minimax(state, 'O', INT32_MIN, INT32_MAX, &move_ind);
 
         // Make that move
         char new_state[BOARD_SIZE];

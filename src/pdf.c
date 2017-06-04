@@ -7,24 +7,29 @@ void error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data)
                 (HPDF_UINT)detail_no);
 }
 
-HPDF_Page gen_cover(HPDF_Doc *pdf, HPDF_Font font, const char *title) {
+HPDF_Page gen_cover(bool page_nums, HPDF_Font font, const char *title, HPDF_Doc *pdf) {
     HPDF_Page cover = HPDF_AddPage(*pdf);
     HPDF_Page_SetWidth(cover, ROW*100);
-    HPDF_Page_SetHeight(cover, ROW*100);
+    HPDF_Page_SetHeight(cover, page_nums ? (ROW + 1) * 100 : ROW * 100);
+
+    // If there's space for page numbers, move the title up a bit
+    uint32_t height_offset = page_nums ? 50 : 0;
 
     HPDF_Page_BeginText(cover);
 
     HPDF_Page_SetFontAndSize(cover, font, ROW*16);
-    HPDF_Page_TextRect(cover, 0, ROW*75, ROW*100, 75, title, HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_TextRect(cover, 0, ROW*75 + height_offset, ROW*100, 75 + height_offset, title, HPDF_TALIGN_CENTER, NULL);
 
-    HPDF_Page_SetFontAndSize(cover, font, ROW*8);
-    HPDF_Page_TextRect(cover, 0, 75, ROW*100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
-    HPDF_Page_EndText(cover);
+    if(!page_nums) {
+        HPDF_Page_SetFontAndSize(cover, font, ROW*8);
+        HPDF_Page_TextRect(cover, 0, 75, ROW*100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
+        HPDF_Page_EndText(cover);
+    }
 
     return cover;
 }
 
-int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *msg) {
+int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *msg, bool page_nums) {
     HPDF_Page_GSave(page);
     HPDF_ExtGState gstate = HPDF_CreateExtGState(*pdf);
     HPDF_ExtGState_SetAlphaFill(gstate, 0.90);
@@ -43,17 +48,37 @@ int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *ms
     HPDF_Page_SetFontAndSize(page, font, ROW*16);
     HPDF_Page_TextRect(page, 0, ROW*75, ROW*100, 75, msg, HPDF_TALIGN_CENTER, NULL);
 
-    HPDF_Page_SetFontAndSize(page, font, ROW*8);
-    HPDF_Page_TextRect(page, 0, 75, ROW*100, 0, "Click to Continue", HPDF_TALIGN_CENTER, NULL);
-    HPDF_Page_EndText(page);
+    if(!page_nums) {
+        HPDF_Page_SetFontAndSize(page, font, ROW*8);
+        HPDF_Page_TextRect(page, 0, 75, ROW*100, 0, "Click to Continue", HPDF_TALIGN_CENTER, NULL);
+        HPDF_Page_EndText(page);
+    }
 
     return EXIT_SUCCESS;
 }
 
-int gen_page(board_inf_t *board, HPDF_Doc *pdf) {
+int gen_page(board_inf_t *board, bool page_nums, HPDF_Font font, HPDF_Doc *pdf) {
     board->page = HPDF_AddPage(*pdf);
     HPDF_Page_SetWidth(board->page, ROW*100);
-    HPDF_Page_SetHeight(board->page, ROW*100);
+
+    if(page_nums) {
+        HPDF_Page_SetHeight(board->page, (ROW + 1)*100);
+
+        HPDF_Page_SetGrayFill(board->page, 0.25);
+
+        HPDF_Page_BeginText(board->page);
+
+        HPDF_Page_SetFontAndSize(board->page, font, 100);
+
+        char page_num[17] = {0};
+        snprintf(page_num, 17, "%u", board->page_num);
+
+        HPDF_Page_TextRect(board->page, 0, (ROW + 1) * 100, ROW * 100, ROW * 100, page_num, HPDF_TALIGN_CENTER, NULL);
+
+        HPDF_Page_EndText(board->page);
+    } else {
+        HPDF_Page_SetHeight(board->page, ROW*100);
+    }
 
     // Draw background
     HPDF_Page_SetGrayFill(board->page, 1);
@@ -94,7 +119,7 @@ int gen_page(board_inf_t *board, HPDF_Doc *pdf) {
     return EXIT_SUCCESS;
 }
 
-int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
+int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
     *pdf = HPDF_New(error_handler, NULL);
     if(!pdf) {
         perror("Cold not create PdfDoc object");
@@ -110,7 +135,7 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     HPDF_Font font = HPDF_GetFont(*pdf, "Times-Roman", NULL);
 
     // Generate cover
-    HPDF_Page cover = gen_cover(pdf, font, "The Complete Tic-Tac-Toe");
+    HPDF_Page cover = gen_cover(page_nums, font, "The Complete Tic-Tac-Toe", pdf);
     HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
     HPDF_SetOpenAction(*pdf, cover_dst);
 
@@ -124,10 +149,14 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     HPDF_Annotation annot;
     HPDF_Destination dst;
 
+    uint32_t page_num = 0;
+
     board_inf_t *s, *tmp;
     HASH_ITER(hh, boards, s, tmp) {
+        s->page_num = ++page_num;
+
         // Create new page
-        gen_page(s, pdf);
+        gen_page(s, page_nums, font, pdf);
     }
 
     HASH_ITER(hh, boards, s, tmp) {
@@ -139,11 +168,11 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
             rect.bottom = 0;
 
             if(s->winner == 'X') {
-                draw_game_over(pdf, s->page, font, "X Won!");
+                draw_game_over(pdf, s->page, font, "X Won!", page_nums);
             } else if(s->winner == 'O') {
-                draw_game_over(pdf, s->page, font, "O Won!");
+                draw_game_over(pdf, s->page, font, "O Won!", page_nums);
             } else {
-                draw_game_over(pdf, s->page, font, "It's a draw. Wow.");
+                draw_game_over(pdf, s->page, font, "A draw. Wow.", page_nums);
             }
 
             annot = HPDF_Page_CreateLinkAnnot(s->page, rect, cover_dst);
@@ -171,12 +200,27 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
                 // Generate a rectangular area
                 rect.left = i * 100;
                 rect.right = rect.left + 100;
-                rect.top = j * 100;
-                rect.bottom = rect.top + 100;
+                rect.bottom = j * 100;
+                rect.top = rect.bottom + 100;
 
                 board_inf_t *tmp = tmp_head->data;
 
                 tmp_head = tmp_head->next;
+
+                if(page_nums) {
+                    HPDF_Page_SetGrayFill(s->page, 0.25);
+                    HPDF_Page_BeginText(s->page);
+                    HPDF_Page_SetFontAndSize(s->page, font, 36);
+
+                    char page_num[17] = {0};
+                    snprintf(page_num, 17, "%u", tmp->page_num);
+
+                    HPDF_Page_TextRect(s->page, rect.left, rect.top - (100 - 42) / 2, rect.right, rect.bottom + (100 - 42) / 2, page_num, HPDF_TALIGN_CENTER, NULL);
+
+                    HPDF_Page_EndText(s->page);
+
+                    continue;
+                }
 
                 // Add a link to the page
                 dst = HPDF_Page_CreateDestination(tmp->page);

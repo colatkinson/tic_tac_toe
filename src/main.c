@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     fflush(stdout);
 
     HPDF_Doc pdf = NULL;
-    gen_pdf(mm, &pdf);
+    gen_pdf(mm, true, &pdf);
 
     printf("DONE\n");
 

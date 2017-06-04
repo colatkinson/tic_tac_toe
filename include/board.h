@@ -22,6 +22,7 @@ typedef struct board_inf {
     char winner;
 
     HPDF_Page page;
+    uint32_t page_num;
 
     UT_hash_handle hh;
 } board_inf_t;

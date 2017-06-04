@@ -1,4 +1,6 @@
 #pragma once
+#include <stdbool.h>
+
 #include <uthash.h>
 #include <hpdf.h>
 
@@ -23,3 +25,6 @@ typedef struct board_inf {
 
     UT_hash_handle hh;
 } board_inf_t;
+
+void free_move_list(move_list_t **moves);
+board_inf_t *gen_child_boards(char *state, char player, bool ai, board_inf_t *boards);

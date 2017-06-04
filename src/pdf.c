@@ -139,11 +139,14 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
         return EXIT_FAILURE;
     }
 
+    // Use tree structure for pages
+    HPDF_SetPagesConfiguration(*pdf, 64);
+
     // Compress PDF
     HPDF_SetCompressionMode(*pdf, HPDF_COMP_ALL);
 
-    // Open in full screen mode
-    HPDF_SetPageMode(*pdf, HPDF_PAGE_MODE_FULL_SCREEN);
+    // If electronic mode, open in full screen mode
+    if(!page_nums) HPDF_SetPageMode(*pdf, HPDF_PAGE_MODE_FULL_SCREEN);
 
     HPDF_Font font = HPDF_GetFont(*pdf, "Times-Roman", NULL);
 

@@ -268,5 +268,9 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
     HPDF_LinkAnnot_SetHighlightMode(annot, HPDF_ANNOT_NO_HIGHTLIGHT);
     HPDF_LinkAnnot_SetBorderStyle(annot, 0, 0, 0);
 
+    // Add custom page numbering
+    HPDF_AddPageLabel(*pdf, 1, HPDF_PAGE_NUM_STYLE_DECIMAL, 0, "Cover ");
+    HPDF_AddPageLabel(*pdf, 2, HPDF_PAGE_NUM_STYLE_DECIMAL, 1, "Game State ");
+
     return EXIT_SUCCESS;
 }

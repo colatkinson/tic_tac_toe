@@ -9,12 +9,20 @@
 #include <pdf.h>
 #include <board.h>
 
+void print_usage(char *prog) {
+    printf("Usage: %s [-2p] [-h]\n", prog);
+
+    printf("\t2: 2-player mode. If set, will allow playing as both X and O.\n");
+    printf("\tp: Print mode. If set, will print line numbers.\n");
+    printf("\th: Print this help message.\n");
+}
+
 int main(int argc, char **argv) {
     bool two_player = false;
     bool print = false;
     char c;
 
-    while((c = getopt(argc, argv, "2p")) != -1) {
+    while((c = getopt(argc, argv, "2ph")) != -1) {
         switch(c) {
             case '2':
                 two_player = true;
@@ -22,7 +30,8 @@ int main(int argc, char **argv) {
             case 'p':
                 print = true;
                 break;
-            default:
+            default: // Also -h
+                print_usage(argv[0]);
                 return EXIT_FAILURE;
         }
     }
@@ -51,7 +60,7 @@ int main(int argc, char **argv) {
 
     printf("DONE\n");
 
-    HPDF_SaveToFile(pdf, "out.pdf");
+    HPDF_SaveToFile(pdf, "tic_tac_toe.pdf");
     HPDF_Free(pdf);
 
     HASH_ITER(hh, mm, s, tmp) {

@@ -20,6 +20,7 @@ void print_usage(char *prog) {
 }
 
 int main(int argc, char **argv) {
+    // Parse command line options
     bool two_player = false;
     bool print = false;
     bool verbose = false;
@@ -59,6 +60,7 @@ int main(int argc, char **argv) {
         fflush(stdout);
     }
 
+    // Generate board states starting from a blank board
     board_inf_t *mm = gen_child_boards(state, 'X', !two_player, NULL);
 
     if(verbose) printf("DONE\n");
@@ -74,12 +76,15 @@ int main(int argc, char **argv) {
         fflush(stdout);
     }
 
+    // Generate a new PDF
     HPDF_Doc pdf = NULL;
     gen_pdf(mm, print, &pdf);
 
     if(verbose) printf("DONE\n");
 
     HPDF_SaveToFile(pdf, file_name);
+
+    // Free memory
     HPDF_Free(pdf);
 
     HASH_ITER(hh, mm, s, tmp) {

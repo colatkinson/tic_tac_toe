@@ -7,9 +7,10 @@ void error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no, void *user_data)
                 (HPDF_UINT)detail_no);
 }
 
+// Generate the cover page
 HPDF_Page gen_cover(bool page_nums, HPDF_Font font, const char *title, HPDF_Doc *pdf) {
     HPDF_Page cover = HPDF_AddPage(*pdf);
-    HPDF_Page_SetWidth(cover, ROW*100);
+    HPDF_Page_SetWidth(cover, ROW * 100);
     HPDF_Page_SetHeight(cover, page_nums ? (ROW + 1) * 100 : ROW * 100);
 
     // If there's space for page numbers, move the title up a bit
@@ -17,52 +18,63 @@ HPDF_Page gen_cover(bool page_nums, HPDF_Font font, const char *title, HPDF_Doc 
 
     HPDF_Page_BeginText(cover);
 
-    HPDF_Page_SetFontAndSize(cover, font, ROW*16);
-    HPDF_Page_TextRect(cover, 0, ROW*75 + height_offset, ROW*100, 75 + height_offset, title, HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_SetFontAndSize(cover, font, ROW * 16);
+    HPDF_Page_TextRect(cover, 0, ROW * 75 + height_offset, ROW * 100, 75 + height_offset, title,
+                       HPDF_TALIGN_CENTER, NULL);
 
+    // If in print mode, don't reference clicking
     if(!page_nums) {
-        HPDF_Page_SetFontAndSize(cover, font, ROW*8);
-        HPDF_Page_TextRect(cover, 0, 75, ROW*100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
+        HPDF_Page_SetFontAndSize(cover, font, ROW * 8);
+        HPDF_Page_TextRect(cover, 0, 75, ROW * 100, 0, "Click to Start", HPDF_TALIGN_CENTER, NULL);
         HPDF_Page_EndText(cover);
     }
 
     return cover;
 }
 
-int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *msg, bool page_nums) {
+// Draw the game over overlay
+int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *msg,
+                   bool page_nums) {
+    // Use a GState to draw with transparency
     HPDF_Page_GSave(page);
     HPDF_ExtGState gstate = HPDF_CreateExtGState(*pdf);
     HPDF_ExtGState_SetAlphaFill(gstate, 0.90);
     HPDF_Page_SetExtGState(page, gstate);
 
+    // Draw a translucent white overlay
     HPDF_Page_SetGrayFill(page, 1);
-    HPDF_Page_Rectangle(page, 0, 0, ROW*100, ROW*100);
+    HPDF_Page_Rectangle(page, 0, 0, ROW * 100, ROW * 100);
     HPDF_Page_Fill(page);
 
+    // Exit GState
     HPDF_Page_GRestore(page);
 
+    // Draw text
     HPDF_Page_SetGrayFill(page, 0.25);
 
     HPDF_Page_BeginText(page);
 
-    HPDF_Page_SetFontAndSize(page, font, ROW*16);
-    HPDF_Page_TextRect(page, 0, ROW*75, ROW*100, 75, msg, HPDF_TALIGN_CENTER, NULL);
+    HPDF_Page_SetFontAndSize(page, font, ROW * 16);
+    HPDF_Page_TextRect(page, 0, ROW * 75, ROW * 100, 75, msg, HPDF_TALIGN_CENTER, NULL);
 
+    // If in print mode, don't print stuff about clicking
     if(!page_nums) {
-        HPDF_Page_SetFontAndSize(page, font, ROW*8);
-        HPDF_Page_TextRect(page, 0, 75, ROW*100, 0, "Click to Continue", HPDF_TALIGN_CENTER, NULL);
+        HPDF_Page_SetFontAndSize(page, font, ROW * 8);
+        HPDF_Page_TextRect(page, 0, 75, ROW * 100, 0,
+                           "Click to Continue", HPDF_TALIGN_CENTER, NULL);
         HPDF_Page_EndText(page);
     }
 
     return EXIT_SUCCESS;
 }
 
+// Generate a game state page
 int gen_page(board_inf_t *board, bool page_nums, HPDF_Font font, HPDF_Doc *pdf) {
     board->page = HPDF_AddPage(*pdf);
-    HPDF_Page_SetWidth(board->page, ROW*100);
+    HPDF_Page_SetWidth(board->page, ROW * 100);
 
     if(page_nums) {
-        HPDF_Page_SetHeight(board->page, (ROW + 1)*100);
+        HPDF_Page_SetHeight(board->page, (ROW + 1) * 100);
 
         HPDF_Page_SetGrayFill(board->page, 0.25);
 
@@ -73,16 +85,17 @@ int gen_page(board_inf_t *board, bool page_nums, HPDF_Font font, HPDF_Doc *pdf) 
         char page_num[17] = {0};
         snprintf(page_num, 17, "%u", board->page_num);
 
-        HPDF_Page_TextRect(board->page, 0, (ROW + 1) * 100, ROW * 100, ROW * 100, page_num, HPDF_TALIGN_CENTER, NULL);
+        HPDF_Page_TextRect(board->page, 0, (ROW + 1) * 100, ROW * 100, ROW * 100, page_num,
+                           HPDF_TALIGN_CENTER, NULL);
 
         HPDF_Page_EndText(board->page);
     } else {
-        HPDF_Page_SetHeight(board->page, ROW*100);
+        HPDF_Page_SetHeight(board->page, ROW * 100);
     }
 
     // Draw background
     HPDF_Page_SetGrayFill(board->page, 1);
-    HPDF_Page_Rectangle(board->page, 0, 0, ROW*100, ROW*100);
+    HPDF_Page_Rectangle(board->page, 0, 0, ROW * 100, ROW * 100);
     HPDF_Page_Fill(board->page);
 
     // Draw graw boxes
@@ -207,6 +220,7 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
 
                 tmp_head = tmp_head->next;
 
+                // If it's print mode, add page numbers to the page
                 if(page_nums) {
                     HPDF_Page_SetGrayFill(s->page, 0.25);
                     HPDF_Page_BeginText(s->page);
@@ -215,10 +229,13 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
                     char page_num[17] = {0};
                     snprintf(page_num, 17, "%u", tmp->page_num);
 
-                    HPDF_Page_TextRect(s->page, rect.left, rect.top - (100 - 42) / 2, rect.right, rect.bottom + (100 - 42) / 2, page_num, HPDF_TALIGN_CENTER, NULL);
+                    HPDF_Page_TextRect(s->page, rect.left, rect.top - (100 - 42) / 2, rect.right,
+                                       rect.bottom + (100 - 42) / 2, page_num, HPDF_TALIGN_CENTER,
+                                       NULL);
 
                     HPDF_Page_EndText(s->page);
 
+                    // Don't bother adding links
                     continue;
                 }
 

@@ -3,7 +3,7 @@
 IDIR = ./include
 UT_IDIR = ./uthash/src
 DEPS = $(IDIR)/pdf.h $(IDIR)/board.h
-FLAGS = -DHPDF_SHARED -pg
+FLAGS = -DHPDF_SHARED
 LDLIBS = -lhpdf -lpng -lz -lm
 BDIR = ./build
 OBJS = $(addprefix $(BDIR)/, main.o board.o pdf.o)

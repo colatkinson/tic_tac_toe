@@ -26,5 +26,5 @@ typedef struct board_inf {
     UT_hash_handle hh;
 } board_inf_t;
 
-void free_move_list(move_list_t **moves);
+void free_board(board_inf_t *board);
 board_inf_t *gen_child_boards(char *state, char player, bool ai, board_inf_t *boards);

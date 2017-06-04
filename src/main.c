@@ -38,8 +38,7 @@ int main(int argc, char **argv) {
 
     HASH_ITER(hh, mm, s, tmp) {
         HASH_DEL(mm, s);
-        free_move_list(&(s->moves_head));
-        free(s);
+        free_board(s);
     }
 
     return EXIT_SUCCESS;

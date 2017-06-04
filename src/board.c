@@ -17,6 +17,11 @@ void free_move_list(move_list_t **moves) {
     *moves = NULL;
 }
 
+void free_board(board_inf_t *board) {
+    free_move_list(&(board->moves_head));
+    free(board);
+}
+
 void print_board(char *state) {
     for(size_t i = 0; i < ROW + 4; ++i) {
         printf("_");

@@ -272,5 +272,13 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
     HPDF_AddPageLabel(*pdf, 1, HPDF_PAGE_NUM_STYLE_DECIMAL, 0, "Cover ");
     HPDF_AddPageLabel(*pdf, 2, HPDF_PAGE_NUM_STYLE_DECIMAL, 1, "Game State ");
 
+    // Create outline destination for the cover
+    HPDF_Outline cover_outline = HPDF_CreateOutline(*pdf, NULL, "Cover", NULL);
+    HPDF_Outline_SetDestination(cover_outline, cover_dst);
+
+    // Create outline destination for the game itself
+    HPDF_Outline game_outline = HPDF_CreateOutline(*pdf, NULL, "Game", NULL);
+    HPDF_Outline_SetDestination(game_outline, dst);
+
     return EXIT_SUCCESS;
 }

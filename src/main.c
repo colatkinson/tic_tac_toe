@@ -10,19 +10,21 @@
 #include <board.h>
 
 void print_usage(char *prog) {
-    printf("Usage: %s [-2p] [-h]\n", prog);
+    printf("Usage: %s [-2pv] [-h]\n", prog);
 
     printf("\t2: 2-player mode. If set, will allow playing as both X and O.\n");
     printf("\tp: Print mode. If set, will print line numbers.\n");
+    printf("\tv: Verbose output.\n");
     printf("\th: Print this help message.\n");
 }
 
 int main(int argc, char **argv) {
     bool two_player = false;
     bool print = false;
+    bool verbose = false;
     char c;
 
-    while((c = getopt(argc, argv, "2ph")) != -1) {
+    while((c = getopt(argc, argv, "2pvh")) != -1) {
         switch(c) {
             case '2':
                 two_player = true;
@@ -30,7 +32,10 @@ int main(int argc, char **argv) {
             case 'p':
                 print = true;
                 break;
-            default: // Also -h
+            case 'v':
+                verbose = true;
+                break;
+            default:    // Also -h
                 print_usage(argv[0]);
                 return EXIT_FAILURE;
         }
@@ -39,12 +44,14 @@ int main(int argc, char **argv) {
     char state[BOARD_SIZE];
     memset(state, ' ', BOARD_SIZE);
 
-    printf("Generating boards... ");
-    fflush(stdout);
+    if(verbose) {
+        printf("Generating boards... ");
+        fflush(stdout);
+    }
 
     board_inf_t *mm = gen_child_boards(state, 'X', !two_player, NULL);
 
-    printf("DONE\n");
+    if(verbose) printf("DONE\n");
 
     size_t count = 0;
     board_inf_t *s, *tmp;
@@ -52,13 +59,15 @@ int main(int argc, char **argv) {
         ++count;
     }
 
-    printf("Generating PDF... ");
-    fflush(stdout);
+    if(verbose) {
+        printf("Generating PDF... ");
+        fflush(stdout);
+    }
 
     HPDF_Doc pdf = NULL;
     gen_pdf(mm, print, &pdf);
 
-    printf("DONE\n");
+    if(verbose) printf("DONE\n");
 
     HPDF_SaveToFile(pdf, "tic_tac_toe.pdf");
     HPDF_Free(pdf);
@@ -67,6 +76,8 @@ int main(int argc, char **argv) {
         HASH_DEL(mm, s);
         free_board(s);
     }
+
+    if(verbose) printf("File written, exiting\n");
 
     return EXIT_SUCCESS;
 }

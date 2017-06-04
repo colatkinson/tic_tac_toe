@@ -145,6 +145,9 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
     // Compress PDF
     HPDF_SetCompressionMode(*pdf, HPDF_COMP_ALL);
 
+    // Display outline by default
+    HPDF_SetPageMode(*pdf, HPDF_PAGE_MODE_USE_OUTLINE);
+
     // If electronic mode, open in full screen mode
     if(!page_nums) HPDF_SetPageMode(*pdf, HPDF_PAGE_MODE_FULL_SCREEN);
 
@@ -154,6 +157,13 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
     HPDF_Page cover = gen_cover(page_nums, font, "The Complete Tic-Tac-Toe", pdf);
     HPDF_Destination cover_dst = HPDF_Page_CreateDestination(cover);
     HPDF_SetOpenAction(*pdf, cover_dst);
+
+    // Create outline destination for the cover
+    HPDF_Outline cover_outline = HPDF_CreateOutline(*pdf, NULL, "Cover", NULL);
+    HPDF_Outline_SetDestination(cover_outline, cover_dst);
+
+    // Create outline destination for the game itself
+    HPDF_Outline game_outline = HPDF_CreateOutline(*pdf, NULL, "Game", NULL);
 
     // Link annotation variables
     HPDF_Rect rect;
@@ -173,6 +183,14 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
 
         // Create new page
         gen_page(s, page_nums, font, pdf);
+
+        char page_num[17] = {0};
+        snprintf(page_num, 17, "%u", s->page_num);
+
+        // Add page to the outline
+        dst = HPDF_Page_CreateDestination(s->page);
+        HPDF_Outline outline = HPDF_CreateOutline(*pdf, game_outline, page_num, NULL);
+        HPDF_Outline_SetDestination(outline, dst);
     }
 
     HASH_ITER(hh, boards, s, tmp) {
@@ -272,12 +290,7 @@ int gen_pdf(board_inf_t *boards, bool page_nums, HPDF_Doc *pdf) {
     HPDF_AddPageLabel(*pdf, 1, HPDF_PAGE_NUM_STYLE_DECIMAL, 0, "Cover ");
     HPDF_AddPageLabel(*pdf, 2, HPDF_PAGE_NUM_STYLE_DECIMAL, 1, "Game State ");
 
-    // Create outline destination for the cover
-    HPDF_Outline cover_outline = HPDF_CreateOutline(*pdf, NULL, "Cover", NULL);
-    HPDF_Outline_SetDestination(cover_outline, cover_dst);
-
-    // Create outline destination for the game itself
-    HPDF_Outline game_outline = HPDF_CreateOutline(*pdf, NULL, "Game", NULL);
+    // Make game outline open to empty state
     HPDF_Outline_SetDestination(game_outline, dst);
 
     return EXIT_SUCCESS;

@@ -1,7 +1,8 @@
 Tic Tac Toe
 ===========
 
-    Version: 1.0.0
+[![GitHub tag](https://img.shields.io/github/tag/colatkinson/tic_tac_toe.svg?style=flat-square)]()
+[![license](https://img.shields.io/github/license/colatkinson/tic_tac_toe.svg?style=flat-square)]()
 
 A nifty little C program to generate playable Tic Tac Toe PDFs.
 
@@ -16,12 +17,21 @@ The program also allows for generating a document for electronic or print consum
 
 Don't want to generate documents on your own? I mean what kind of nerd doesn't love compiling and running C code? But fine, whatever floats your boat. Just check out the releases page.
 
+Screenshots
+-----------
+
+![Cover page](https://i.imgur.com/7FqXUI6.jpg)
+
+![Sample game state](https://i.imgur.com/rbtJ1F3.jpg)
+
+![Another game state](https://i.imgur.com/AkrzImg.jpg)
+
 Building
 --------
 
 Dependencies:
 
- * `libharu`
+ * [libharu](http://libharu.org)
 
 Make sure to recursively clone the repository, as it pulls in `uthash` as a submodule.
 

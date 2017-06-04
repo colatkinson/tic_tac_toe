@@ -50,6 +50,50 @@ int draw_game_over(HPDF_Doc *pdf, HPDF_Page page, HPDF_Font font, const char *ms
     return EXIT_SUCCESS;
 }
 
+int gen_page(board_inf_t *board, HPDF_Doc *pdf) {
+    board->page = HPDF_AddPage(*pdf);
+    HPDF_Page_SetWidth(board->page, ROW*100);
+    HPDF_Page_SetHeight(board->page, ROW*100);
+
+    // Draw background
+    HPDF_Page_SetGrayFill(board->page, 1);
+    HPDF_Page_Rectangle(board->page, 0, 0, ROW*100, ROW*100);
+    HPDF_Page_Fill(board->page);
+
+    // Draw graw boxes
+    HPDF_Page_SetGrayFill(board->page, 0.95);
+    for(size_t i = 0; i < BOARD_SIZE; i += 2) {
+        HPDF_Page_Rectangle(board->page, (i % ROW) * 100, (i / ROW) * 100, 100, 100);
+        HPDF_Page_Fill(board->page);
+    }
+
+    // Now to draw the marks
+    HPDF_Page_SetGrayStroke(board->page, 0.25);
+    HPDF_Page_SetLineWidth(board->page, 5);
+
+    for(size_t i = 0; i < ROW; ++i) {
+        for(size_t j = 0; j < ROW; ++j) {
+            char cur = board->state[i * ROW + j];
+
+            if(cur == 'X') {
+                HPDF_Page_MoveTo(board->page, i * 100 + 25, j * 100 + 25);
+                HPDF_Page_LineTo(board->page, i * 100 + 75, j * 100 + 75);
+
+                HPDF_Page_MoveTo(board->page, i * 100 + 75, j * 100 + 25);
+                HPDF_Page_LineTo(board->page, i * 100 + 25, j * 100 + 75);
+            } else if(cur == 'O') {
+                HPDF_Page_Circle(board->page, i * 100 + 50, j * 100 + 50, 25);
+            } else {
+                continue;
+            }
+
+            HPDF_Page_Stroke(board->page);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
 int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     *pdf = HPDF_New(error_handler, NULL);
     if(!pdf) {
@@ -83,49 +127,11 @@ int gen_pdf(board_inf_t *boards, HPDF_Doc *pdf) {
     board_inf_t *s, *tmp;
     HASH_ITER(hh, boards, s, tmp) {
         // Create new page
-        s->page = HPDF_AddPage(*pdf);
-        HPDF_Page_SetWidth(s->page, ROW*100);
-        HPDF_Page_SetHeight(s->page, ROW*100);
-
-        // Draw background
-        HPDF_Page_SetGrayFill(s->page, 1);
-        HPDF_Page_Rectangle(s->page, 0, 0, ROW*100, ROW*100);
-        HPDF_Page_Fill(s->page);
-
-        // Draw graw boxes
-        HPDF_Page_SetGrayFill(s->page, 0.95);
-        for(size_t i = 0; i < BOARD_SIZE; i += 2) {
-            HPDF_Page_Rectangle(s->page, (i % ROW) * 100, (i / ROW) * 100, 100, 100);
-            HPDF_Page_Fill(s->page);
-        }
-
-        // Now to draw the marks
-        HPDF_Page_SetGrayStroke(s->page, 0.25);
-        HPDF_Page_SetLineWidth(s->page, 5);
-
-        for(size_t i = 0; i < ROW; ++i) {
-            for(size_t j = 0; j < ROW; ++j) {
-                char cur = s->state[i * ROW + j];
-
-                if(cur == 'X') {
-                    HPDF_Page_MoveTo(s->page, i * 100 + 25, j * 100 + 25);
-                    HPDF_Page_LineTo(s->page, i * 100 + 75, j * 100 + 75);
-
-                    HPDF_Page_MoveTo(s->page, i * 100 + 75, j * 100 + 25);
-                    HPDF_Page_LineTo(s->page, i * 100 + 25, j * 100 + 75);
-                } else if(cur == 'O') {
-                    HPDF_Page_Circle(s->page, i * 100 + 50, j * 100 + 50, 25);
-                } else {
-                    continue;
-                }
-
-                HPDF_Page_Stroke(s->page);
-            }
-        }
+        gen_page(s, pdf);
     }
 
     HASH_ITER(hh, boards, s, tmp) {
-        // For now, don't add any links for won games
+        // Don't add any links for won games
         if(s->winner != 0) {
             rect.left = 0;
             rect.right = ROW * 100;
